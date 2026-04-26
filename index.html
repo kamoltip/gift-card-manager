@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gift Card Manager</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --bg2: #f5f5f4;
+      --bg3: #e7e5e4;
+      --text: #1c1917;
+      --text2: #78716c;
+      --text3: #a8a29e;
+      --border: rgba(0,0,0,0.12);
+      --border2: rgba(0,0,0,0.2);
+      --green-bg: #EAF3DE;
+      --green-text: #3B6D11;
+      --red: #E24B4A;
+      --red-bg: #fef2f2;
+      --red-text: #b91c1c;
+      --red-border: #fca5a5;
+      --success-bg: #f0fdf4;
+      --success-text: #15803d;
+      --success-border: #86efac;
+      --radius: 8px;
+      --radius-lg: 12px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1c1917;
+        --bg2: #292524;
+        --bg3: #3f3835;
+        --text: #fafaf9;
+        --text2: #a8a29e;
+        --text3: #78716c;
+        --border: rgba(255,255,255,0.1);
+        --border2: rgba(255,255,255,0.2);
+        --green-bg: #14532d;
+        --green-text: #86efac;
+        --red-bg: #450a0a;
+        --red-text: #fca5a5;
+        --red-border: #7f1d1d;
+        --success-bg: #052e16;
+        --success-text: #86efac;
+        --success-border: #15803d;
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); min-height: 100vh; }
+    .container { max-width: 860px; margin: 0 auto; padding: 24px 16px; }
+    h1 { font-size: 22px; font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .tabs { display: flex; gap: 2px; margin-bottom: 20px; background: var(--bg2); border-radius: var(--radius); padding: 4px; overflow-x: auto; }
+    .tab { flex: 1; padding: 8px 12px; font-size: 13px; border: none; background: none; cursor: pointer; color: var(--text2); border-radius: 6px; white-space: nowrap; transition: all .15s; }
+    .tab.active { background: var(--bg); color: var(--text); font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+    .section { display: none; } .section.active { display: block; }
+    .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 16px; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 13px; color: var(--text2); margin-bottom: 6px; }
+    input[type=text], input[type=number] { width: 100%; padding: 9px 12px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: 14px; outline: none; }
+    input:focus { border-color: var(--text2); }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .btn { padding: 9px 16px; border-radius: var(--radius); font-size: 13px; cursor: pointer; border: 0.5px solid var(--border2); background: none; color: var(--text); transition: all .15s; }
+    .btn:hover { background: var(--bg2); }
+    .btn-primary { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 500; }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-danger { border-color: var(--red-border); color: var(--red-text); }
+    .btn-danger:hover { background: var(--red-bg); }
+    .btn-full { width: 100%; }
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+    .stat-card { background: var(--bg2); border-radius: var(--radius); padding: 14px; text-align: center; }
+    .stat-label { font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+    .stat-val { font-size: 20px; font-weight: 600; }
+    .search-bar { display: flex; gap: 8px; margin-bottom: 14px; }
+    .search-bar input { flex: 1; }
+    .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+    .gift-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 16px; }
+    .gift-card.expired { opacity: 0.45; }
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .card-name { font-weight: 600; font-size: 15px; }
+    .card-id { font-size: 11px; color: var(--text3); font-family: monospace; margin-top: 2px; }
+    .balance-row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 6px; }
+    .balance-val { font-size: 22px; font-weight: 700; }
+    .balance-of { font-size: 13px; color: var(--text2); }
+    .progress-bar { height: 4px; background: var(--bg3); border-radius: 2px; margin-bottom: 12px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 2px; background: var(--text); transition: width .3s; }
+    .progress-fill.low { background: var(--red); }
+    .qr-wrap { display: flex; justify-content: center; padding: 8px 0 10px; }
+    .card-footer { display: flex; justify-content: space-between; align-items: center; }
+    .card-date { font-size: 11px; color: var(--text3); }
+    .card-actions { display: flex; gap: 6px; }
+    .badge { font-size: 11px; padding: 2px 8px; border-radius: 99px; }
+    .badge-active { background: var(--green-bg); color: var(--green-text); }
+    .badge-empty { background: var(--red-bg); color: var(--red-text); }
+    .scan-methods { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+    .method-btn { padding: 12px; border: 0.5px solid var(--border); border-radius: var(--radius); background: none; cursor: pointer; font-size: 13px; color: var(--text2); display: flex; flex-direction: column; align-items: center; gap: 5px; transition: all .15s; }
+    .method-btn.active { border-color: var(--text); color: var(--text); background: var(--bg2); font-weight: 500; }
+    .method-icon { font-size: 22px; }
+    .camera-wrap { position: relative; border-radius: var(--radius); overflow: hidden; background: #000; margin-bottom: 12px; }
+    .camera-wrap video { width: 100%; display: block; max-height: 280px; object-fit: cover; }
+    .scan-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+    .scan-frame { width: 170px; height: 170px; border: 2px solid rgba(255,255,255,.85); border-radius: 10px; box-shadow: 0 0 0 9999px rgba(0,0,0,.38); }
+    .scan-line { position: absolute; width: 150px; height: 2px; background: rgba(255,255,255,.75); animation: scanline 1.8s ease-in-out infinite; }
+    @keyframes scanline { 0%,100% { top: calc(50% - 83px); } 50% { top: calc(50% + 83px); } }
+    .cam-status { position: absolute; bottom: 10px; left: 0; right: 0; text-align: center; color: #fff; font-size: 12px; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
+    .cam-controls { display: flex; gap: 8px; margin-bottom: 12px; }
+    .upload-zone { border: 1.5px dashed var(--border2); border-radius: var(--radius); padding: 28px 16px; text-align: center; cursor: pointer; margin-bottom: 12px; transition: background .15s; }
+    .upload-zone:hover { background: var(--bg2); }
+    .upload-zone input { display: none; }
+    .divider { display: flex; align-items: center; gap: 10px; margin: 14px 0; }
+    .divider span { font-size: 12px; color: var(--text3); white-space: nowrap; }
+    .divider hr { flex: 1; border: none; border-top: 0.5px solid var(--border); }
+    .manual-row { display: flex; gap: 8px; }
+    .manual-row input { flex: 1; }
+    .result-box { border-radius: var(--radius); padding: 14px; margin-top: 14px; border: 0.5px solid var(--border); }
+    .result-box.success { border-color: var(--success-border); background: var(--success-bg); }
+    .result-box.error { border-color: var(--red-border); background: var(--red-bg); }
+    .result-title { font-weight: 600; margin-bottom: 5px; font-size: 14px; }
+    .result-box.success .result-title { color: var(--success-text); }
+    .result-box.error .result-title { color: var(--red-text); }
+    .result-detail { font-size: 13px; color: var(--text2); line-height: 1.6; }
+    .deduct-row { display: flex; gap: 8px; margin-top: 12px; }
+    .deduct-row input { flex: 1; }
+    .log-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+    .log-filters { display: flex; gap: 6px; flex-wrap: wrap; }
+    .filter-btn { padding: 5px 12px; border: 0.5px solid var(--border); border-radius: 99px; font-size: 12px; cursor: pointer; background: none; color: var(--text2); }
+    .filter-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+    .log-actions { display: flex; gap: 6px; }
+    .log-list { display: flex; flex-direction: column; gap: 6px; }
+    .log-item { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px 14px; display: grid; grid-template-columns: 1fr auto; gap: 3px 12px; }
+    .log-item.type-deduct { border-left: 3px solid var(--red); }
+    .log-item.type-create { border-left: 3px solid #1D9E75; }
+    .log-item.type-delete { border-left: 3px solid #888; }
+    .log-main { font-size: 13px; font-weight: 500; }
+    .log-sub { font-size: 12px; color: var(--text2); grid-column: 1; }
+    .log-time { font-size: 11px; color: var(--text3); text-align: right; font-family: monospace; }
+    .log-amount { font-size: 13px; font-weight: 600; text-align: right; }
+    .log-amount.deduct { color: var(--red); }
+    .log-amount.create { color: #1D9E75; }
+    .empty { text-align: center; padding: 3rem; color: var(--text3); font-size: 14px; }
+    .highlight { background: #fef08a; border-radius: 2px; padding: 0 2px; color: #713f12; }
+    .io-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    @media print {
+      body { background: white; }
+      .tabs, .search-bar, .scan-methods, .cam-controls, .btn-primary, .btn-danger, .log-header, .io-row { display: none !important; }
+      .gift-card { break-inside: avoid; border: 1px solid #ccc !important; }
+      .cards-grid { grid-template-columns: repeat(2, 1fr) !important; }
+    }
+    @media (max-width: 480px) {
+      .row, .stats-row { grid-template-columns: 1fr; }
+      .cards-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>🎁 Gift Card Manager</h1>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('create')">สร้างบัตร</button>
+    <button class="tab" onclick="switchTab('cards')">บัตรทั้งหมด</button>
+    <button class="tab" onclick="switchTab('scan')">สแกนจ่าย</button>
+    <button class="tab" onclick="switchTab('log')">Log</button>
+  </div>
+
+  <!-- CREATE -->
+  <div id="tab-create" class="section active">
+    <div class="card">
+      <div class="row">
+        <div class="field"><label>ชื่อ / หมายเหตุ</label><input type="text" id="cardName" placeholder="เช่น New Year Gift"/></div>
+        <div class="field"><label>มูลค่า ($)</label><input type="number" id="cardAmount" placeholder="50.00" min="0.01" step="0.01"/></div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="createCard()">สร้าง Gift Card + QR Code</button>
+    </div>
+    <div id="newCardPreview"></div>
+  </div>
+
+  <!-- CARDS -->
+  <div id="tab-cards" class="section">
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">บัตรทั้งหมด</div><div class="stat-val" id="statTotal">0</div></div>
+      <div class="stat-card"><div class="stat-label">ยังใช้ได้</div><div class="stat-val" id="statActive">0</div></div>
+      <div class="stat-card"><div class="stat-label">คงเหลือรวม</div><div class="stat-val" id="statBalance">$0</div></div>
+    </div>
+    <div class="search-bar">
+      <input type="text" id="cardSearch" placeholder="ค้นหาชื่อ หรือรหัสบัตร..." oninput="renderCards()"/>
+      <button class="btn" onclick="window.print()">🖨️ พิมพ์</button>
+    </div>
+    <div class="io-row">
+      <button class="btn" onclick="exportData()">📤 Export JSON</button>
+      <button class="btn" onclick="document.getElementById('importFile').click()">📥 Import JSON</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)"/>
+    </div>
+    <div id="cardsGrid" class="cards-grid"></div>
+  </div>
+
+  <!-- SCAN -->
+  <div id="tab-scan" class="section">
+    <div class="card">
+      <div class="scan-methods">
+        <button class="method-btn active" id="mb-camera" onclick="setMethod('camera')"><span class="method-icon">📷</span>กล้อง realtime</button>
+        <button class="method-btn" id="mb-upload" onclick="setMethod('upload')"><span class="method-icon">🖼️</span>อัพโหลดรูป</button>
+      </div>
+      <div id="method-camera">
+        <div class="camera-wrap" id="cameraWrap" style="display:none">
+          <video id="camVideo" autoplay playsinline muted></video>
+          <div class="scan-overlay"><div class="scan-frame"></div><div class="scan-line"></div></div>
+          <div class="cam-status" id="camStatus">กำลังสแกน...</div>
+        </div>
+        <canvas id="camCanvas" style="display:none"></canvas>
+        <div class="cam-controls">
+          <button class="btn btn-full" onclick="startCamera()">เปิดกล้อง</button>
+          <button class="btn btn-danger btn-full" onclick="stopCamera()">ปิดกล้อง</button>
+        </div>
+      </div>
+      <div id="method-upload" style="display:none">
+        <div class="upload-zone" onclick="document.getElementById('qrFile').click()">
+          <input type="file" id="qrFile" accept="image/*" onchange="handleUpload(event)"/>
+          <div style="font-size:32px;margin-bottom:8px">🖼️</div>
+          <div style="font-size:14px;color:var(--text2)">คลิกเลือกรูป หรือลากวางที่นี่</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">JPG, PNG</div>
+        </div>
+        <div id="uploadStatus"></div>
+        <canvas id="uploadCanvas" style="display:none"></canvas>
+      </div>
+      <div class="divider"><hr><span>หรือพิมพ์ชื่อ / รหัสเอง</span><hr></div>
+      <div class="manual-row">
+        <input type="text" id="manualInput" placeholder="ชื่อบัตร หรือ GC-XXXX-XXXX" style="text-transform:uppercase"/>
+        <button class="btn" onclick="lookupManual()">ค้นหา</button>
+      </div>
+      <div id="scanResult"></div>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div id="tab-log" class="section">
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">ทั้งหมด</div><div class="stat-val" id="logStatAll">0</div></div>
+      <div class="stat-card"><div class="stat-label">ยอดหักรวม</div><div class="stat-val" id="logStatDeduct" style="color:var(--red)">$0</div></div>
+      <div class="stat-card"><div class="stat-label">บัตรสร้าง</div><div class="stat-val" id="logStatCreate" style="color:#1D9E75">0</div></div>
+    </div>
+    <div class="search-bar">
+      <input type="text" id="logSearch" placeholder="ค้นหาชื่อ หรือรหัสบัตร..." oninput="renderLog()"/>
+      <button class="btn" onclick="window.print()">🖨️ พิมพ์</button>
+    </div>
+    <div class="log-header">
+      <div class="log-filters">
+        <button class="filter-btn active" onclick="filterLog('all',this)">ทั้งหมด</button>
+        <button class="filter-btn" onclick="filterLog('deduct',this)">หักเงิน</button>
+        <button class="filter-btn" onclick="filterLog('create',this)">สร้างบัตร</button>
+        <button class="filter-btn" onclick="filterLog('delete',this)">ลบบัตร</button>
+      </div>
+      <div class="log-actions">
+        <button class="btn" onclick="exportLog()">📤 Export Log</button>
+        <button class="btn btn-danger" onclick="clearLog()">ล้าง log</button>
+      </div>
+    </div>
+    <div id="logList" class="log-list"></div>
+  </div>
+</div>
+
+<script>
+let cards = JSON.parse(localStorage.getItem('gcm_cards') || '[]');
+let logs  = JSON.parse(localStorage.getItem('gcm_logs')  || '[]');
+let foundCard = null, camStream = null, scanLoop = null, lastScanned = '', logFilter = 'all';
+
+const fmt = n => '$' + parseFloat(n).toFixed(2);
+const save = () => localStorage.setItem('gcm_cards', JSON.stringify(cards));
+const saveLogs = () => localStorage.setItem('gcm_logs', JSON.stringify(logs));
+const genId = () => 'GC-' + Math.random().toString(36).substr(2,4).toUpperCase() + '-' + Math.random().toString(36).substr(2,4).toUpperCase();
+
+function addLog(type, cardId, cardName, amount, extra) {
+  logs.unshift({ id: Date.now(), type, cardId, cardName, amount: amount||0, extra: extra||'', ts: new Date().toLocaleString('th-TH') });
+  if (logs.length > 500) logs = logs.slice(0, 500);
+  saveLogs();
+}
+
+function hi(text, q) {
+  if (!q) return text;
+  return text.replace(new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')','gi'), '<span class="highlight">$1</span>');
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['create','cards','scan','log'][i] === tab));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  if (tab === 'cards') renderCards();
+  if (tab === 'log') renderLog();
+  if (tab === 'create') document.getElementById('newCardPreview').innerHTML = '';
+  if (tab !== 'scan') stopCamera();
+}
+
+function setMethod(m) {
+  document.getElementById('mb-camera').classList.toggle('active', m === 'camera');
+  document.getElementById('mb-upload').classList.toggle('active', m === 'upload');
+  document.getElementById('method-camera').style.display = m === 'camera' ? 'block' : 'none';
+  document.getElementById('method-upload').style.display = m === 'upload' ? 'block' : 'none';
+  if (m !== 'camera') stopCamera();
+  document.getElementById('scanResult').innerHTML = '';
+}
+
+async function startCamera() {
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    document.getElementById('camVideo').srcObject = camStream;
+    document.getElementById('cameraWrap').style.display = 'block';
+    lastScanned = '';
+    scanLoop = setInterval(scanFrame, 300);
+  } catch(e) { alert('ไม่สามารถเปิดกล้องได้\nกรุณาอนุญาตการเข้าถึงกล้อง'); }
+}
+
+function stopCamera() {
+  if (scanLoop) { clearInterval(scanLoop); scanLoop = null; }
+  if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+  document.getElementById('cameraWrap').style.display = 'none';
+}
+
+function scanFrame() {
+  const v = document.getElementById('camVideo');
+  if (v.readyState !== v.HAVE_ENOUGH_DATA) return;
+  const c = document.getElementById('camCanvas');
+  c.width = v.videoWidth; c.height = v.videoHeight;
+  const ctx = c.getContext('2d'); ctx.drawImage(v, 0, 0);
+  const code = jsQR(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height);
+  if (code && code.data !== lastScanned) {
+    lastScanned = code.data;
+    document.getElementById('camStatus').textContent = 'พบ QR: ' + code.data;
+    stopCamera();
+    processCardId(code.data.trim().toUpperCase());
+  }
+}
+
+function handleUpload(event) {
+  const file = event.target.files[0]; if (!file) return;
+  document.getElementById('uploadStatus').innerHTML = '<p style="text-align:center;padding:.5rem;font-size:13px;color:var(--text2)">กำลังอ่าน QR...</p>';
+  document.getElementById('scanResult').innerHTML = '';
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.getElementById('uploadCanvas');
+      c.width = img.width; c.height = img.height;
+      const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0);
+      const code = jsQR(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height);
+      if (code) {
+        document.getElementById('uploadStatus').innerHTML = `<p style="padding:.5rem;font-size:13px;color:var(--success-text)">อ่าน QR ได้: <strong>${code.data}</strong></p>`;
+        processCardId(code.data.trim().toUpperCase());
+      } else {
+        document.getElementById('uploadStatus').innerHTML = '<p style="padding:.5rem;font-size:13px;color:var(--red-text)">อ่าน QR ไม่ได้ — ลองรูปที่ชัดขึ้น</p>';
+      }
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+function lookupManual() {
+  const val = document.getElementById('manualInput').value.trim().toUpperCase();
+  if (!val) return;
+  processCardId(val);
+}
+
+function processCardId(id) {
+  foundCard = cards.find(c => c.id === id) || cards.find(c => c.name.toUpperCase() === id && c.balance > 0);
+  const result = document.getElementById('scanResult');
+  if (!foundCard) {
+    result.innerHTML = `<div class="result-box error"><div class="result-title">ไม่พบบัตร</div><div class="result-detail">ไม่พบรหัสหรือชื่อ "${id}" ในระบบ</div></div>`;
+    return;
+  }
+  if (foundCard.balance === 0) {
+    result.innerHTML = `<div class="result-box error"><div class="result-title">บัตรหมดแล้ว</div><div class="result-detail">บัตร "${foundCard.name}" ยอดเงินหมดแล้ว</div></div>`;
+    return;
+  }
+  result.innerHTML = `<div class="result-box success">
+    <div class="result-title">พบบัตร: ${foundCard.name}</div>
+    <div class="result-detail">รหัส: ${foundCard.id}<br>ยอดคงเหลือ: <strong>${fmt(foundCard.balance)}</strong> จาก ${fmt(foundCard.amount)}</div>
+    <div class="deduct-row">
+      <input type="number" id="deductAmt" placeholder="ยอดที่จะหัก ($)" min="0.01" step="0.01" max="${foundCard.balance}"/>
+      <button class="btn btn-primary" onclick="deduct()">หักเงิน</button>
+    </div>
+  </div>`;
+}
+
+function deduct() {
+  const amt = parseFloat(parseFloat(document.getElementById('deductAmt').value).toFixed(2));
+  if (!foundCard || !amt || amt <= 0) { alert('ใส่จำนวนเงินที่ถูกต้อง'); return; }
+  if (amt > foundCard.balance) { alert(`ยอดไม่พอ มีแค่ ${fmt(foundCard.balance)}`); return; }
+  foundCard.balance = parseFloat((foundCard.balance - amt).toFixed(2));
+  save();
+  const remaining = foundCard.balance, name = foundCard.name, cid = foundCard.id;
+  let msg;
+  if (remaining === 0) {
+    addLog('deduct', cid, name, amt, 'หักเต็ม — บัตรหมด');
+    addLog('delete', cid, name, 0, 'บัตรหมดอัตโนมัติ');
+    cards = cards.filter(c => c.id !== foundCard.id); save();
+    msg = `<div class="result-box error"><div class="result-title">หักเงินสำเร็จ — บัตรหมดแล้ว</div><div class="result-detail">หัก ${fmt(amt)} จากบัตร "${name}"<br>บัตรถูกลบออกจากระบบแล้ว</div></div>`;
+    foundCard = null;
+  } else {
+    addLog('deduct', cid, name, amt, `คงเหลือ ${fmt(remaining)}`);
+    msg = `<div class="result-box success"><div class="result-title">หักเงินสำเร็จ -${fmt(amt)}</div><div class="result-detail">บัตร: ${name}<br>ยอดคงเหลือ: ${fmt(remaining)}</div></div>`;
+  }
+  document.getElementById('scanResult').innerHTML = msg;
+  document.getElementById('manualInput').value = '';
+  lastScanned = '';
+}
+
+function makeQR(containerId, text, size) {
+  const el = document.getElementById(containerId); if (!el) return;
+  el.innerHTML = '';
+  try { new QRCode(el, { text, width: size, height: size, correctLevel: QRCode.CorrectLevel.M }); } catch(e) {}
+}
+
+function createCard() {
+  const name = document.getElementById('cardName').value.trim() || 'Gift Card';
+  const amount = parseFloat(parseFloat(document.getElementById('cardAmount').value).toFixed(2));
+  if (!amount || amount <= 0) { alert('กรุณาใส่มูลค่า'); return; }
+  const id = genId();
+  const card = { id, name, amount, balance: amount, createdAt: new Date().toLocaleDateString('th-TH') };
+  cards.push(card); save();
+  addLog('create', id, name, amount, '');
+  document.getElementById('cardName').value = '';
+  document.getElementById('cardAmount').value = '';
+  document.getElementById('newCardPreview').innerHTML = `
+    <div class="gift-card" style="max-width:300px;margin:0 auto">
+      <div class="card-header"><div><div class="card-name">${name}</div><div class="card-id">${id}</div></div><span class="badge badge-active">ใหม่</span></div>
+      <div class="balance-row"><span class="balance-val">${fmt(amount)}</span></div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:10px">สร้างเมื่อ ${card.createdAt}</div>
+      <div class="qr-wrap" id="qr-new-${id}"></div>
+      <div style="text-align:center;font-size:11px;color:var(--text3);font-family:monospace">${id}</div>
+    </div>`;
+  setTimeout(() => makeQR(`qr-new-${id}`, id, 160), 100);
+}
+
+function renderCards() {
+  const q = (document.getElementById('cardSearch')?.value || '').trim();
+  const filtered = q ? cards.filter(c => c.name.toLowerCase().includes(q.toLowerCase()) || c.id.toLowerCase().includes(q.toLowerCase())) : cards;
+  document.getElementById('statTotal').textContent = cards.length;
+  document.getElementById('statActive').textContent = cards.filter(c => c.balance > 0).length;
+  document.getElementById('statBalance').textContent = fmt(cards.reduce((s,c) => s + c.balance, 0));
+  const grid = document.getElementById('cardsGrid');
+  if (!filtered.length) { grid.innerHTML = `<div class="empty">${q ? 'ไม่พบบัตรที่ค้นหา' : 'ยังไม่มี Gift Card'}</div>`; return; }
+  grid.innerHTML = filtered.slice().reverse().map(c => {
+    const pct = Math.round(c.balance / c.amount * 100);
+    const empty = c.balance === 0;
+    return `<div class="gift-card ${empty ? 'expired' : ''}">
+      <div class="card-header"><div><div class="card-name">${hi(c.name, q)}</div><div class="card-id">${hi(c.id, q)}</div></div>${empty ? '<span class="badge badge-empty">หมดแล้ว</span>' : '<span class="badge badge-active">ใช้งานได้</span>'}</div>
+      <div class="balance-row"><span class="balance-val">${fmt(c.balance)}</span><span class="balance-of">/ ${fmt(c.amount)}</span></div>
+      <div class="progress-bar"><div class="progress-fill ${pct < 20 ? 'low' : ''}" style="width:${pct}%"></div></div>
+      <div class="qr-wrap" id="qr-${c.id}"></div>
+      <div class="card-footer"><span class="card-date">${c.createdAt}</span>
+        <div class="card-actions">
+          <button class="btn" style="padding:4px 10px;font-size:12px" onclick="printCard('${c.id}')">🖨️</button>
+          ${empty ? `<button class="btn btn-danger" style="padding:4px 10px;font-size:12px" onclick="deleteCard('${c.id}')">ลบ</button>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  filtered.slice().reverse().forEach(c => {
+    if (c.balance > 0) setTimeout(() => makeQR(`qr-${c.id}`, c.id, 120), 50);
+  });
+}
+
+function deleteCard(id) {
+  if (!confirm('ลบบัตรนี้?')) return;
+  const c = cards.find(x => x.id === id);
+  if (c) addLog('delete', c.id, c.name, 0, 'ลบโดยผู้ใช้');
+  cards = cards.filter(c => c.id !== id); save(); renderCards();
+}
+
+function printCard(id) {
+  const c = cards.find(x => x.id === id); if (!c) return;
+  const w = window.open('', '_blank', 'width=420,height=520');
+  w.document.write(`<!DOCTYPE html><html><head><title>${c.name}</title>
+  <style>body{font-family:sans-serif;padding:24px;text-align:center}h2{margin-bottom:4px}.mono{font-family:monospace;font-size:12px;color:#888}#pqr{display:flex;justify-content:center;margin:14px 0}</style>
+  </head><body>
+  <h2>${c.name}</h2><p class="mono">${c.id}</p>
+  <p>Balance: <strong>${fmt(c.balance)}</strong> / ${fmt(c.amount)}</p>
+  <p style="font-size:12px;color:#888">Created: ${c.createdAt}</p>
+  <div id="pqr"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+  <script>new QRCode(document.getElementById('pqr'),{text:'${c.id}',width:200,height:200});setTimeout(()=>window.print(),700)<\/script>
+  </body></html>`);
+  w.document.close();
+}
+
+function filterLog(type, btn) {
+  logFilter = type;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLog();
+}
+
+function renderLog() {
+  const q = (document.getElementById('logSearch')?.value || '').trim();
+  document.getElementById('logStatAll').textContent = logs.length;
+  document.getElementById('logStatDeduct').textContent = fmt(logs.filter(l => l.type === 'deduct').reduce((s,l) => s + l.amount, 0));
+  document.getElementById('logStatCreate').textContent = logs.filter(l => l.type === 'create').length;
+  let filtered = logFilter === 'all' ? logs : logs.filter(l => l.type === logFilter);
+  if (q) filtered = filtered.filter(l => l.cardName.toLowerCase().includes(q.toLowerCase()) || l.cardId.toLowerCase().includes(q.toLowerCase()));
+  const list = document.getElementById('logList');
+  if (!filtered.length) { list.innerHTML = `<div class="empty">${q ? 'ไม่พบ log ที่ค้นหา' : 'ยังไม่มี log'}</div>`; return; }
+  const label = { deduct: 'หักเงิน', create: 'สร้างบัตร', delete: 'ลบบัตร' };
+  list.innerHTML = filtered.map(l => `
+    <div class="log-item type-${l.type}">
+      <div class="log-main">${label[l.type]||l.type} — ${hi(l.cardName, q)}</div>
+      <div class="log-time">${l.ts}</div>
+      <div class="log-sub">${hi(l.cardId, q)}${l.extra ? ' · ' + l.extra : ''}</div>
+      ${l.type==='deduct' ? `<div class="log-amount deduct">-${fmt(l.amount)}</div>` : l.type==='create' ? `<div class="log-amount create">+${fmt(l.amount)}</div>` : `<div class="log-amount" style="color:var(--text3)">—</div>`}
+    </div>`).join('');
+}
+
+function clearLog() {
+  if (!confirm('ล้าง log ทั้งหมด?')) return;
+  logs = []; saveLogs(); renderLog();
+}
+
+function exportData() {
+  const data = { cards, logs, exportedAt: new Date().toISOString() };
+  const a = document.createElement('a');
+  a.href = 'data:application/json,' + encodeURIComponent(JSON.stringify(data, null, 2));
+  a.download = 'giftcard-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+}
+
+function importData(event) {
+  const file = event.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!confirm(`นำเข้า ${data.cards?.length||0} บัตร และ ${data.logs?.length||0} log?\n(จะ merge กับข้อมูลเดิม)`)) return;
+      if (data.cards) {
+        data.cards.forEach(c => { if (!cards.find(x => x.id === c.id)) cards.push(c); });
+        save();
+      }
+      if (data.logs) {
+        data.logs.forEach(l => { if (!logs.find(x => x.id === l.id)) logs.push(l); });
+        logs.sort((a,b) => b.id - a.id);
+        saveLogs();
+      }
+      alert('Import สำเร็จ!');
+      renderCards();
+    } catch(e) { alert('ไฟล์ไม่ถูกต้อง'); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function exportLog() {
+  const a = document.createElement('a');
+  a.href = 'data:application/json,' + encodeURIComponent(JSON.stringify(logs, null, 2));
+  a.download = 'giftcard-log-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+}
+
+const zone = document.querySelector('.upload-zone');
+if (zone) {
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.background = 'var(--bg2)'; });
+  zone.addEventListener('dragleave', () => { zone.style.background = ''; });
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.style.background = '';
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) handleUpload({ target: { files: [file], value: '' } });
+  });
+}
+setMethod('camera');
+</script>
+</body>
+</html>
